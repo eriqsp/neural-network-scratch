@@ -1,59 +1,101 @@
 import numpy as np
 
 
+# TODO: initialize parameters and assign the values to the proprieties of class
+# TODO: create loop for the training procedure (for each mini-batch)
+# TODO: implement derivative for other types of activation functions
+
+
 class Engine:
-    def __init__(self, classification=True):
+    def __init__(self, layers, classification=True):
         self.classification = classification
         self.input_x = None  # dimensions = (a,b), where a=number of examples and b=number of features
         self.y = None  # dimensions = a - output vector
         self.weights = None  # dimensions = (a,b,c), where c=number of layers
         self.bias = None  # dimensions = (a,c)
-        self.n_layers = None
+        self.n_layers = layers
 
-    def forward_propagation(self):
+        self.dW = None
+        self.db = None
+
+        self.Z = None  # Z = WX + b - input for the activation function
+
+    def forward_propagation(self, activation_funcs):
         q = self.input_x
-        z = np.matmul(q, self.weights[0]) + self.bias[0]  # transpose weights and bias before this operation
-        for n in range(1, self.n_layers - 1):
-            q = self.relu(z)
-            z = np.matmul(q, self.weights[n]) + self.bias[n]
+        self.Z[0] = np.matmul(q, self.weights[0]) + self.bias[0]  # transpose weights and bias before this operation
+        for n in range(1, self.n_layers):
+            q = self.activation_function(self.Z[n - 1], activation_funcs[0])
+            self.Z[n] = np.matmul(q, self.weights[n]) + self.bias[n]
 
-        s = self.softmax(z)
+        # final layer transformation
+        y_pred = self.activation_function(self.Z[self.n_layers - 1], activation_funcs[1])
 
-        acc = 0
         if self.classification:
-            self.y_transform()
-            # acc = self.accuracy(self.y, s)
+            perf = self.accuracy(self.y, y_pred)
+            cost = self.cce_cost(self.y, y_pred)
+        else:
+            cost = self.mse_cost(self.y, y_pred)
+            perf = cost
 
-        cost = self.cce_cost(self.y, s)
+        return cost, perf, y_pred
 
-        return cost, acc
+    def backward_propagation(self, y_pred, activation_funcs):
+        n = self.y.size
+        dZ = y_pred - self.y_transform()  # derivative of the cost function w.r.t. z
+        for l in range(self.n_layers - 1, -1, -1):
+            # chain rule makes it easier to compute the derivatives
+            dq = dZ.dot(self.weights[l])
 
-    # For classification: transform the y output into a matrix of entries (a, M) where M is the number os classes
+            self.dW[l] = (1 / n) * dZ.T.dot(dq)
+            self.db[l] = (1 / n) * dZ[1].sum()
+
+            dZ = dq * self.derivActivation(self.Z[l], name=activation_funcs[0])
+
+    # update weights with gradient descent
+    def gradient_descent(self, learning_rate):
+        self.weights += -learning_rate * self.dW
+        self.bias += -learning_rate * self.db
+
+    def derivActivation(self, Z, name='relu'):
+        return Z > 0
+
+    # for classification: transform the y output into a matrix of entries (a, M) where M is the number os classes
     def y_transform(self):
-        structure = np.zeros((self.y.size, self.y.max + 1))
-        structure[np.arange(self.y.size), self.y] = 1
-        self.y = structure
+        y_matrix = np.zeros((self.y.size, self.y.max + 1))
+        y_matrix[np.arange(self.y.size), self.y] = 1
+        return y_matrix
+
+
+    """ cost functions below """
+    # mean-squared error
+    @staticmethod
+    def mse_cost(y, y_p):
+        n = y.size
+        return sum((y - y_p) ** 2) * (1 / n) if n > 0 else None
 
     # categorical cross-entropy
     @staticmethod
     def cce_cost(y, y_p):
         return -sum(sum(y * np.log(y_p)))
 
-    # mean-squared error
-    @staticmethod
-    def mse_cost(y, y_p):
-        n = len(y)
-        return sum((y - y_p) ** 2) * 1 / n if n > 0 else None
+
+    """ activation functions below """
+    def activation_function(self, v, name='relu'):
+        if name == 'softmax':
+            return self._softmax(v)
+        return self._relu(v)
 
     @staticmethod
-    def relu(v):
+    def _relu(v):
         return np.maximum(0, v)
 
     @staticmethod
-    def softmax(v):
+    def _softmax(v):
         return np.exp(v) / sum(np.exp(v))
 
-    @staticmethod
-    def accuracy(y, y_p):
-        predicted = y_p.map(np.argmax)  # not exactly it but yeah
 
+    """ performance evaluation functions """
+    @staticmethod
+    def accuracy(y, y_p):  # for classification problems
+        y_p = np.argmax(y_p, 0)
+        return np.sum(y_p == y) / y.size
