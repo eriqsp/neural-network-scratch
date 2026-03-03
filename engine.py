@@ -1,31 +1,50 @@
 import numpy as np
 
 
-# TODO: initialize parameters and assign the values to the proprieties of class
 # TODO: create loop for the training procedure (for each mini-batch)
 # TODO: implement derivative for other types of activation functions
 
 
 class Engine:
-    def __init__(self, layers, classification=True):
+    def __init__(self, input_data, n_layers, hidden_layers_dim, classification=True):
         self.classification = classification
-        self.input_x = None  # dimensions = (a,b), where a=number of examples and b=number of features
-        self.y = None  # dimensions = a - output vector
+        self.n_layers = n_layers
+        self.hidden_layers_dim = hidden_layers_dim
+
+        self.x = input_data[:, :-1]  # dimensions = (a,b), where a=number of examples and b=number of features
+        self.y = input_data[:, -1]  # dimensions = (a,) - output vector
+
         self.weights = None  # dimensions = (a,b,c), where c=number of layers
         self.bias = None  # dimensions = (a,c)
-        self.n_layers = layers
 
         self.dW = None
         self.db = None
 
         self.Z = None  # Z = WX + b - input for the activation function
 
+    def init_params(self):
+        self.weights = np.array([np.random.uniform(-1, 1, size=(self.x[1].size, self.hidden_layers_dim[0]))])
+        self.bias = np.array([np.random.uniform(-1, 1, size=(1, self.hidden_layers_dim[0]))])
+
+        for layer in range(1, self.n_layers - 1):
+            self.weights[layer] = np.random.uniform(-1, 1, size=(self.hidden_layers_dim[layer - 1], self.hidden_layers_dim[layer]))
+            self.bias[layer] = np.random.uniform(-1, 1, size=(1, self.hidden_layers_dim[layer]))
+
+        # last layer
+        self.weights[self.n_layers - 1] = np.random.uniform(-1, 1, size=(self.hidden_layers_dim[self.n_layers - 2], 1))
+        self.bias[self.n_layers - 1] = np.random.uniform(-1, 1, size=1)
+
+        self.dW = np.zeros_like(self.weights)
+        self.db = np.zeros_like(self.bias)
+
+        self.Z = np.zeros_like(self.bias)
+
     def forward_propagation(self, activation_funcs):
-        q = self.input_x
-        self.Z[0] = np.matmul(q, self.weights[0]) + self.bias[0]  # transpose weights and bias before this operation
+        q = self.x
+        self.Z[0] = q.dot(self.weights[0]) + self.bias[0]  # transpose weights and bias before this operation
         for n in range(1, self.n_layers):
             q = self.activation_function(self.Z[n - 1], activation_funcs[0])
-            self.Z[n] = np.matmul(q, self.weights[n]) + self.bias[n]
+            self.Z[n] = q.dot(self.weights[n]) + self.bias[n]
 
         # final layer transformation
         y_pred = self.activation_function(self.Z[self.n_layers - 1], activation_funcs[1])
