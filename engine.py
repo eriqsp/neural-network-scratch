@@ -59,7 +59,7 @@ class NNEngine:
         q = xb
         self.activations_values = [q]
         for n in range(0, self.n_layers):
-            self.Z[n] = q.dot(self.weights[n].T) + self.bias[n].T
+            self.Z[n] = q @ self.weights[n].T + self.bias[n].T
             if n != self.n_layers - 1:
                 q = self.activation_function(self.Z[n], self.activations_names[0])
                 self.activations_values.append(q)  # storing activations to use on backward propagation
