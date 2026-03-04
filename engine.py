@@ -1,9 +1,6 @@
 import numpy as np
 
 
-# TODO: implement derivative for other types of activation functions
-
-
 class NNEngine:
     def __init__(self, input_data, n_layers, hidden_layers_dim, activations, classification=True):
         self.classification = classification
@@ -23,21 +20,32 @@ class NNEngine:
         self.dW = None
         self.db = None
 
-        self.Z = []  # Z = WX + b - input for the activation function
+        self.Z = None  # Z = WX + b - input for the activation function
 
     def init_params(self, classes=None):
-        self.weights = [np.random.uniform(-1, 1, size=(self.hidden_layers_dim[0], self.x.shape[1]))]
-        self.bias = [np.random.uniform(-1, 1, size=(self.hidden_layers_dim[0], 1))]
+        shape = (self.hidden_layers_dim[0], self.x.shape[1])
+        self.weights = [np.random.normal(0, self._weight_init(self.activations[0], shape), size=shape)]
+        self.bias = [np.zeros((self.hidden_layers_dim[0], 1))]
 
         for layer in range(1, self.n_layers - 1):
-            self.weights.append(np.random.uniform(-1, 1, size=(self.hidden_layers_dim[layer], self.hidden_layers_dim[layer - 1])))
-            self.bias.append(np.random.uniform(-1, 1, size=(self.hidden_layers_dim[layer], 1)))
+            shape = (self.hidden_layers_dim[layer], self.hidden_layers_dim[layer - 1])
+            self.weights.append(np.random.normal(0, self._weight_init(self.activations[0], shape), size=shape))
+            self.bias.append(np.zeros((self.hidden_layers_dim[layer], 1)))
 
         # last layer
-        self.weights.append(np.random.uniform(-1, 1, size=(1 if classes is None else classes, self.hidden_layers_dim[self.n_layers - 2])))
-        self.bias.append(np.random.uniform(-1, 1, size=(1 if classes is None else classes, 1)))
+        shape = (1 if classes is None else classes, self.hidden_layers_dim[self.n_layers - 2])
+        self.weights.append(np.random.normal(0, self._weight_init(self.activations[0], shape), size=shape))
+        self.bias.append(np.zeros((1 if classes is None else classes, 1)))
 
         self.zero_grad()
+
+        self.Z = [np.zeros_like(array) for array in self.bias]
+
+    @staticmethod
+    def _weight_init(activation, shape):
+        if activation == 'relu':
+            return np.sqrt(2 / shape[1])  # uses He initialization
+        return np.sqrt(2 / (shape[0] + shape[1]))  # uses Xavier initialization
 
     def forward_propagation(self, batch_size=None):
         if batch_size is None:
@@ -48,7 +56,7 @@ class NNEngine:
 
         q = xb
         for n in range(0, self.n_layers):
-            self.Z.append(q.dot(self.weights[n].T) + self.bias[n].T)  # TODO: transpose weights and bias before this operation
+            self.Z[n] = q.dot(self.weights[n].T) + self.bias[n].T  # TODO: transpose weights and bias before this operation
             if n != self.n_layers - 1:
                 q = self.activation_function(self.Z[n], self.activations[0])
 
@@ -70,7 +78,7 @@ class NNEngine:
         if self.classification:
             dZ = y_pred - self._y_transform(y)  # derivative of the cost function w.r.t. z
         else:
-            dZ = y_pred - y.reshape(-1, 1)  # for regression is the same logic as for classification, but without the classes
+            dZ = 2 * (y_pred - y.reshape(-1, 1))
 
         dq = 1
         for l in range(self.n_layers - 1, -1, -1):
@@ -92,8 +100,8 @@ class NNEngine:
     # update weights with gradient descent
     def gradient_descent(self, learning_rate: float):
         for layer in range(self.n_layers):
-            self.weights[layer] += -learning_rate * self.dW[layer]
-            self.bias[layer] += -learning_rate * self.db[layer]
+            self.weights[layer] -= learning_rate * self.dW[layer]
+            self.bias[layer] -= learning_rate * self.db[layer]
 
     def zero_grad(self):
         self.dW = [np.zeros_like(array) for array in self.weights]
@@ -116,7 +124,14 @@ class NNEngine:
     def _softmax(v):
         return np.exp(v) / sum(np.exp(v))
 
-    def derivActivation(self, Z, name='relu'):
+    @staticmethod
+    def _tanh(v):
+        return np.tanh(v)
+
+    @staticmethod
+    def derivActivation(Z, name='relu'):
+        if name == 'tanh':
+            return 1 - np.tanh(Z) ** 2
         return Z > 0
 
 
