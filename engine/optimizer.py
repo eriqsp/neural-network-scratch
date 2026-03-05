@@ -4,11 +4,12 @@ from engine.performance import Performance
 
 
 class NNOptimizer:
-    def __init__(self, layers, classification=True):
+    def __init__(self, layers, classification, classes=None):
         self.act = Activations()  # activation functions and its derivatives
         self.perf = Performance()  # class containing methods to evaluate performance
 
         self.classification = classification
+        self.classes = classes
 
         self.n_layers = len(layers)
         self.layers = layers  # list of tuples - [(n_units, activation_function)]
@@ -106,8 +107,6 @@ class NNOptimizer:
             self.bias[layer] -= learning_rate * self.db[layer]
 
     # for classification: transform the y output into a matrix of entries (a, M) where M is the number os classes
-    @staticmethod
-    def _y_transform(y):
-        classes = np.unique(y)
-        one_hot = (y[:, np.newaxis] == classes)
+    def _y_transform(self, y):
+        one_hot = (y[:, np.newaxis] == self.classes)
         return one_hot.astype('float64')

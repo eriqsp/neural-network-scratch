@@ -14,5 +14,5 @@ t = Training(layers, classification, 10)
 # update parameters with sgd (stochastic gradient descent) procedure
 t.training_procedure(x, y, batch_size)
 
-# get r2
+# get r2 for test set
 t.validation(x, y)

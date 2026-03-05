@@ -2,7 +2,7 @@
 
 Builds a neural network engine from the ground up using only numpy. Implements backpropagation and gradient descent from matrices multiplications. You can input how many layers the NN is going to have, what is the activation function of each layer and how many units (neurons) each layer has. It works both for regression and classification problems.
 
-I've tested this framework on the [MNIST dataset](https://en.wikipedia.org/wiki/MNIST_database). It worked pretty well, with ~87% of accuracy on out-of-sample data.
+I've tested this framework on the [MNIST dataset](https://en.wikipedia.org/wiki/MNIST_database). It worked pretty well, with ~90% of accuracy on out-of-sample data for only two hidden layers with 100 and 50 units, respectively.
 
 ## Project Structure
 - `engine`:
@@ -11,7 +11,7 @@ I've tested this framework on the [MNIST dataset](https://en.wikipedia.org/wiki/
   few examples using the framework from *engine*
 
 ## Technologies
-I only used Python and numpy. On `use_cases\mnist.py` I've used *sklearn*, but only to import the MNIST dataset - you could download the dataset for yourself and use it from your computer, so you wouldn't needed to import sklearn.
+I only used Python and numpy. On `use_cases\mnist\demo_with_engine.py` I've used *sklearn*, but only to import the MNIST dataset - you could download the dataset for yourself and use it from your computer, so you wouldn't needed to import sklearn.
 
 ## How to run
 To run the scripts that are in the subdirectory `use_cases`:
@@ -24,7 +24,7 @@ To run the scripts that are in the subdirectory `use_cases`:
    pip install -r requirements.txt
 3. Run and see the magic
    ```bash
-   python use_cases\mnist.py
+   python use_cases\mnist\demo_with_engine.py
 
 
 ## Example
@@ -46,7 +46,7 @@ t = Training(layers, classification, 10)
 # update parameters with sgd (stochastic gradient descent) procedure
 t.training_procedure(x, y, batch_size)
 
-# get r2
+# get r2 for test set
 t.validation(x, y)
 ```
 

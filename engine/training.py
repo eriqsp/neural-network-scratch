@@ -4,8 +4,8 @@ from engine.optimizer import NNOptimizer
 
 
 class Training(NNOptimizer):
-    def __init__(self, layers, classification, seed=10):
-        super().__init__(layers, classification)
+    def __init__(self, layers, classification, classes=None, seed=10):
+        super().__init__(layers, classification, classes)
 
         np.random.seed(seed)
 
@@ -30,11 +30,11 @@ class Training(NNOptimizer):
 
             self.activations_values = None
 
-    def validation(self, x: np.array, y: np.array, datatype: str = 'validation'):
+    def validation(self, x: np.array, y: np.array):
         _, perf, _, y_pred = self.forward_propagation(x, y, batch_size=None)
 
-        print('-' * 100)
-        print(f'Performance for {datatype} set:')
+        print('\n' + '-' * 100)
+        print(f'Test performance')
         print('-' * 100)
         if self.classification:
             print(f"accuracy={perf}")
