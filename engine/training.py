@@ -1,9 +1,9 @@
 import numpy as np
 from typing import Union
-from engine.engine import NNEngine
+from engine.optimizer import NNOptimizer
 
 
-class Training(NNEngine):
+class Training(NNOptimizer):
     def __init__(self, layers, classification, seed=10):
         super().__init__(layers, classification)
 

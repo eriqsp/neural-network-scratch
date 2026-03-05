@@ -1,8 +1,13 @@
 import numpy as np
+from engine.activations import Activations
+from engine.performance import Performance
 
 
-class NNEngine:
+class NNOptimizer:
     def __init__(self, layers, classification=True):
+        self.act = Activations()  # activation functions and its derivatives
+        self.perf = Performance()  # class containing methods to evaluate performance
+
         self.classification = classification
 
         self.n_layers = len(layers)
@@ -60,18 +65,18 @@ class NNEngine:
         for n in range(0, self.n_layers):
             self.Z[n] = q @ self.weights[n].T + self.bias[n].T
             if n != self.n_layers - 1:
-                q = self.activation_function(self.Z[n], self.layers[n][1])
+                q = self.act.activation_function(self.Z[n], self.layers[n][1])
                 self.activations_values.append(q)  # storing activations to use on backward propagation
 
         # final layer transformation
-        y_pred = self.activation_function(self.Z[self.n_layers - 1], self.layers[self.n_layers - 1][1])
+        y_pred = self.act.activation_function(self.Z[self.n_layers - 1], self.layers[self.n_layers - 1][1])
 
         if self.classification:
-            perf = self.accuracy(yb, y_pred)
-            cost = self.cce_cost(yb, y_pred)
+            perf = self.perf.accuracy(yb, y_pred)
+            cost = self.perf.cce_cost(self._y_transform(yb), y_pred)
         else:
-            cost = self.mse_cost(yb, y_pred)
-            perf = self.r_squared(yb, y_pred)
+            cost = self.perf.mse_cost(yb, y_pred)
+            perf = self.perf.r_squared(yb, y_pred)
 
         return cost, perf, yb, y_pred
 
@@ -92,14 +97,7 @@ class NNEngine:
             self.db[l] = (1 / n) * np.sum(dZ, axis=0, keepdims=True).T
 
             if l > 0:
-                dZ = (dZ @ self.weights[l]) * self.derivActivation(self.Z[l - 1], name=self.layers[l - 1][1])
-
-    # for classification: transform the y output into a matrix of entries (a, M) where M is the number os classes
-    @staticmethod
-    def _y_transform(y):
-        classes = np.unique(y)
-        one_hot = (y[:, np.newaxis] == classes)
-        return one_hot.astype('float64')
+                dZ = (dZ @ self.weights[l]) * self.act.deriv_activation(self.Z[l - 1], name=self.layers[l - 1][1])
 
     # update weights with gradient descent
     def gradient_descent(self, learning_rate: float):
@@ -107,58 +105,9 @@ class NNEngine:
             self.weights[layer] -= learning_rate * self.dW[layer]
             self.bias[layer] -= learning_rate * self.db[layer]
 
-
-    """ activation functions below """
-    def activation_function(self, v, name=None):
-        if name == 'relu':
-            return self._relu(v)
-        if name == 'softmax':
-            return self._softmax(v)
-        if name == 'tanh':
-            return self._tanh(v)
-        return v
-
+    # for classification: transform the y output into a matrix of entries (a, M) where M is the number os classes
     @staticmethod
-    def _relu(v):
-        return np.maximum(0, v)
-
-    @staticmethod
-    def _softmax(v):
-        exps = np.exp(v - np.max(v, axis=1, keepdims=True))
-        return exps / np.sum(exps, axis=1, keepdims=True)
-
-    @staticmethod
-    def _tanh(v):
-        return np.tanh(v)
-
-    @staticmethod
-    def derivActivation(Z, name='relu'):
-        if name == 'tanh':
-            return 1 - np.tanh(Z) ** 2
-        return Z > 0
-
-
-    """ cost functions below """
-    # mean-squared error
-    @staticmethod
-    def mse_cost(y, y_p):
-        n = y.size
-        return sum((y - y_p.ravel()) ** 2) * (1 / n) if n > 0 else None
-
-    # categorical cross-entropy
-    def cce_cost(self, y, y_p):
-        return -sum(sum(self._y_transform(y) * np.log(np.clip(y_p, 1e-15, 1.0))))
-
-
-    """ performance evaluation functions """
-    @staticmethod
-    def accuracy(y, y_p):  # for classification problems
-        y_p = np.argmax(y_p, 1).astype(str)
-        return np.sum(y_p == y) / y.size
-
-    @staticmethod
-    def r_squared(y, y_p):  # for regression problems
-        corr_matrix = np.corrcoef(y, y_p.ravel())
-        r = corr_matrix[0, 1]
-        r2 = r ** 2
-        return r2
+    def _y_transform(y):
+        classes = np.unique(y)
+        one_hot = (y[:, np.newaxis] == classes)
+        return one_hot.astype('float64')
