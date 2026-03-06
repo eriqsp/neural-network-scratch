@@ -50,6 +50,10 @@ t.training_procedure(x, y, batch_size)
 t.validation(x, y)
 ```
 
+## Reference
+For this project, I mostly used the book (chapter 6: Neural Networks and Deep Learning):
+[**Machine Learning: A First Course for Engineers and Scientists**](https://smlbook.org/)
+
 ## License
 
 MIT
